@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dashboard Investigadores UANL</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--navy:#1F4E78;--teal:#00838F;--green:#2E7D32;--red:#C62828;--amber:#EF6C00;--pink:#AD1457;--bg:#f4f6f9;--card:#fff;--line:#e3e8ef;--txt:#1f2a37;--mut:#6b7785}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--txt);font-size:14px}
+header{background:linear-gradient(120deg,#1F4E78,#00838F);color:#fff;padding:22px 28px}
+header h1{font-size:22px;font-weight:700}
+header p{opacity:.85;font-size:13px;margin-top:4px}
+.tabs{display:flex;gap:6px;padding:0 28px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.tab{padding:14px 18px;cursor:pointer;font-weight:600;color:var(--mut);border-bottom:3px solid transparent}
+.tab.active{color:var(--navy);border-bottom-color:var(--navy)}
+.wrap{padding:24px 28px;max-width:1240px;margin:0 auto}
+.view{display:none}.view.active{display:block}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.kpi .v{font-size:26px;font-weight:800;line-height:1}.kpi .l{color:var(--mut);font-size:12px;margin-top:6px;text-transform:uppercase;letter-spacing:.4px}
+.kpi.b{border-top:3px solid var(--navy)}.kpi.g{border-top:3px solid var(--green)}.kpi.t{border-top:3px solid var(--teal)}.kpi.r{border-top:3px solid var(--red)}
+.kpi.p{border-top:3px solid var(--pink)}.kpi.a{border-top:3px solid var(--amber)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.panel h3{font-size:14px;margin-bottom:12px;color:var(--navy)}
+.chartbox{position:relative;height:300px}
+select,input{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:9px;width:100%;background:#fff}
+label{font-size:12px;color:var(--mut);font-weight:600;display:block;margin-bottom:5px}
+.detail{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.mgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
+.metric{background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:12px}
+.metric .v{font-size:22px;font-weight:800}.metric .l{font-size:11px;color:var(--mut);text-transform:uppercase}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}
+.b-ok{background:#e2efda;color:#2E7D32}.b-rev{background:#fff2cc;color:#8a6d00}.b-no{background:#fce4d6;color:#C62828}
+.jlist{list-style:none}.jlist li{padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.jlist li:before{content:"•";color:var(--teal);font-weight:900;margin-right:8px}
+a.orcid{color:var(--teal);text-decoration:none;font-weight:600}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:9px 10px;text-align:left;border-bottom:1px solid var(--line)}
+th{background:#f1f5f9;cursor:pointer;user-select:none;position:sticky;top:49px;font-size:12px}
+th:hover{background:#e6edf5}
+tr:hover td{background:#f8fafc}
+td.num,th.num{text-align:right}
+.qbar{display:flex;height:22px;border-radius:6px;overflow:hidden;margin-top:8px;border:1px solid var(--line)}
+.qbar span{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700}
+.muted{color:var(--mut);font-size:13px}
+.pill{font-size:11px;background:#eef2f7;color:#556;padding:2px 8px;border-radius:12px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.grid2,.detail{grid-template-columns:1fr}}
+</style></head><body>
+<header><h1>Panel de Investigadores — UANL</h1><p>Fuente: OpenAlex (jul-2026) · Cuartiles JCR pendientes de Web of Science · 93 investigadores</p></header>
+<div class="tabs">
+<div class="tab active" data-v="gen">Vista general</div>
+<div class="tab" data-v="exp">Explorador por investigador</div>
+<div class="tab" data-v="tab">Tabla completa</div>
+</div>
+<div class="wrap">
+<div class="view active" id="gen">
+<div class="kpis" id="kpis"></div>
+<div class="grid2">
+<div class="panel"><h3>Top 12 por Citas totales</h3><div class="chartbox"><canvas id="cCit"></canvas></div></div>
+<div class="panel"><h3>Top 12 por Índice H</h3><div class="chartbox"><canvas id="cH"></canvas></div></div>
+</div>
+<div class="grid2">
+<div class="panel"><h3>Distribución de Índice H</h3><div class="chartbox"><canvas id="cHd"></canvas></div></div>
+<div class="panel"><h3>Cobertura ORCID / perfil</h3><div class="chartbox"><canvas id="cOr"></canvas></div></div>
+</div>
+<div class="panel"><h3>Publicaciones por cuartil (SJR / Scimago)</h3><div class="chartbox" style="height:260px"><canvas id="cQ"></canvas></div></div>
+</div>
+<div class="view" id="exp">
+<div class="panel">
+<div class="grid2">
+<div><label>Buscar investigador</label><input id="q" placeholder="Escribe un nombre..."></div>
+<div><label>Seleccionar</label><select id="sel"></select></div>
+</div>
+</div>
+<div id="detail"></div>
+</div>
+<div class="view" id="tab">
+<div class="panel">
+<label>Filtrar</label><input id="tq" placeholder="Filtrar por nombre o estado...">
+<div style="overflow:auto;margin-top:12px;max-height:70vh"><table id="tbl"><thead><tr>
+<th data-k="name">Investigador</th><th class="num" data-k="pubs">Pubs</th><th class="num" data-k="cites">Citas</th>
+<th class="num" data-k="h">H</th><th class="num" data-k="i10">i10</th><th class="num" data-k="cpp">Citas/Pub</th>
+<th data-k="orcid">ORCID</th><th data-k="estado">Estado</th></tr></thead><tbody></tbody></table></div>
+</div>
+</div>
+</div>
+<script>
+const DATA=__DATA__;
+const N=v=>v==null?"—":v.toLocaleString('es-MX');
+const withM=DATA.filter(r=>r.pubs!=null);
+const sum=(a,k)=>a.reduce((s,r)=>s+(r[k]||0),0);
+const conperfil=DATA.filter(r=>r.pubs!=null).length, conorcid=DATA.filter(r=>r.orcid).length, sinperfil=DATA.length-conperfil;
+const havg=(sum(withM,'h')/withM.length).toFixed(1), hmax=Math.max(...withM.map(r=>r.h));
+const kpis=[["Investigadores",DATA.length,"b"],["Con perfil",conperfil,"g"],["Con ORCID",conorcid,"t"],["Sin perfil",sinperfil,"r"],
+["Publicaciones",N(sum(withM,'pubs')),"p"],["Citas totales",N(sum(withM,'cites')),"a"],["H promedio",havg,"b"],["H máximo",hmax,"t"]];
+document.getElementById('kpis').innerHTML=kpis.map(k=>`<div class="kpi ${k[2]}"><div class="v">${k[1]}</div><div class="l">${k[0]}</div></div>`).join('');
+// estado badge
+function badge(e){let c='b-rev';if(e.startsWith('Verificado')&&!/revisar|BUAP|confusion|Revisar/.test(e))c='b-ok';else if(e.startsWith('No encontrado'))c='b-no';return `<span class="badge ${c}">${e}</span>`}
+// tabs
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));t.classList.add('active');document.getElementById(t.dataset.v).classList.add('active')});
+// charts
+const short=n=>{const p=n.split(' ');return p.length>2?p[0][0]+'. '+p.slice(-2).join(' '):n};
+function bar(id,arr,key,color){const top=[...withM].sort((a,b)=>b[key]-a[key]).slice(0,12);
+ new Chart(document.getElementById(id),{type:'bar',data:{labels:top.map(r=>short(r.name)),datasets:[{data:top.map(r=>r[key]),backgroundColor:color,borderRadius:4}]},
+ options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}},maintainAspectRatio:false}});}
+if(window.Chart){
+ bar('cCit',withM,'cites','#AD1457');bar('cH',withM,'h','#1F4E78');
+ const bins=[0,0,0,0,0,0],labs=['0-5','6-10','11-15','16-20','21-30','31+'];
+ withM.forEach(r=>{let h=r.h;bins[h<=5?0:h<=10?1:h<=15?2:h<=20?3:h<=30?4:5]++});
+ new Chart(document.getElementById('cHd'),{type:'bar',data:{labels:labs,datasets:[{data:bins,backgroundColor:'#EF6C00',borderRadius:4}]},options:{plugins:{legend:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false}}},maintainAspectRatio:false}});
+ new Chart(document.getElementById('cOr'),{type:'doughnut',data:{labels:['Con ORCID','Perfil sin ORCID','Sin perfil'],datasets:[{data:[conorcid,conperfil-conorcid,sinperfil],backgroundColor:['#00838F','#8ecae6','#C62828']}]},options:{plugins:{legend:{position:'bottom'}},maintainAspectRatio:false}});
+ const qt=[0,0,0,0,0];withM.forEach(r=>{if(r.q)r.q.forEach((v,i)=>qt[i]+=v)});
+ new Chart(document.getElementById('cQ'),{type:'bar',data:{labels:['Q1','Q2','Q3','Q4','Sin cuartil'],datasets:[{data:qt,backgroundColor:['#2E7D32','#66BB6A','#FFA726','#EF5350','#B0BEC5'],borderRadius:4}]},options:{plugins:{legend:{display:false},title:{display:false}},scales:{x:{grid:{display:false}},y:{grid:{display:false}}},maintainAspectRatio:false}});
+}
+// explorer
+const sel=document.getElementById('sel'),q=document.getElementById('q'),det=document.getElementById('detail');
+function fillSel(f=''){const list=DATA.filter(r=>r.name.toLowerCase().includes(f.toLowerCase()));sel.innerHTML=list.map(r=>`<option value="${r.cvu}">${r.name}</option>`).join('');if(list.length)showDet(list[0].cvu)}
+function qbar(q){const c=['#2E7D32','#66BB6A','#FFA726','#EF5350','#B0BEC5'],lb=['Q1','Q2','Q3','Q4','S/C'];const tot=q.reduce((a,b)=>a+b,0)||1;
+ return '<div class="qbar">'+q.map((v,i)=>v?`<span style="flex:${v};background:${c[i]}" title="${lb[i]}: ${v}">${v}</span>`:'').join('')+'</div>';}
+function showDet(cvu){const r=DATA.find(x=>x.cvu==cvu);if(!r)return;
+ let works='';
+ if(r.rev){works=`<div class="panel"><h3>Revistas principales</h3><ul class="jlist">${r.rev.map(j=>`<li>${j}</li>`).join('')}</ul>`+
+   (r.q?`<div style="margin-top:12px"><div class="muted">Distribución por cuartil (SJR / Scimago)</div>${qbar(r.q)}<div class="muted" style="margin-top:6px">Q1:${r.q[0]} · Q2:${r.q[1]} · Q3:${r.q[2]} · Q4:${r.q[3]} · Sin cuartil:${r.q[4]}</div></div>`:'')+`</div>`;}
+ else if(r.pubs!=null){works=`<div class="panel"><h3>Revistas principales</h3><p class="muted">Pendiente — se completa con la tarea programada (OpenAlex) y el cuartil JCR con Web of Science.</p></div>`;}
+ else {works=`<div class="panel"><h3>Trabajos</h3><p class="muted">Sin perfil localizable en OpenAlex. Revisar manualmente en Web of Science / Scopus.</p></div>`;}
+ const orc=r.orcid?`<a class="orcid" href="https://orcid.org/${r.orcid}" target="_blank">${r.orcid} ↗</a>`:'<span class="muted">Sin ORCID</span>';
+ const typ=(r.art!=null)?`<div class="mgrid"><div class="metric"><div class="v">${r.art}</div><div class="l">Artículos</div></div><div class="metric"><div class="v">${r.pe}</div><div class="l">Preprints/Edit.</div></div><div class="metric"><div class="v">${r.cap}</div><div class="l">Capítulos</div></div></div>`:'';
+ det.innerHTML=`<div class="panel"><div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px"><div><h3 style="font-size:18px">${r.name}</h3><div class="muted">CVU ${r.cvu} · ${orc}</div></div>${badge(r.estado)}</div>
+ <div class="mgrid" style="grid-template-columns:repeat(6,1fr)">
+ <div class="metric"><div class="v">${N(r.pubs)}</div><div class="l">Publicaciones</div></div>
+ <div class="metric"><div class="v">${N(r.cites)}</div><div class="l">Citas</div></div>
+ <div class="metric"><div class="v">${r.h??'—'}</div><div class="l">Índice H</div></div>
+ <div class="metric"><div class="v">${r.i10??'—'}</div><div class="l">Índice i10</div></div>
+ <div class="metric"><div class="v">${r.cpp??'—'}</div><div class="l">Citas/Pub</div></div>
+ <div class="metric"><div class="v">${r.p2??'—'}</div><div class="l">Citas 2yr</div></div></div>${typ}</div>
+ <div class="detail">${works}</div>`;}
+sel.onchange=()=>showDet(sel.value);q.oninput=()=>fillSel(q.value);fillSel();
+// table
+const tb=document.querySelector('#tbl tbody');let sortK='cites',sortD=-1;
+function rowHtml(r){return `<tr><td>${r.name}</td><td class="num">${N(r.pubs)}</td><td class="num">${N(r.cites)}</td><td class="num">${r.h??'—'}</td><td class="num">${r.i10??'—'}</td><td class="num">${r.cpp??'—'}</td><td>${r.orcid?'✔':'—'}</td><td>${badge(r.estado)}</td></tr>`}
+function renderT(f=''){let list=DATA.filter(r=>r.name.toLowerCase().includes(f.toLowerCase())||r.estado.toLowerCase().includes(f.toLowerCase()));
+ list.sort((a,b)=>{let x=a[sortK],y=b[sortK];if(x==null)x=-1;if(y==null)y=-1;if(typeof x==='string')return sortD*x.localeCompare(y);return sortD*(x-y)});
+ tb.innerHTML=list.map(rowHtml).join('')}
+document.querySelectorAll('#tbl th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(sortK===k)sortD*=-1;else{sortK=k;sortD=(k==='name')?1:-1}renderT(document.getElementById('tq').value)});
+document.getElementById('tq').oninput=e=>renderT(e.target.value);renderT();
+</script></body></html>
